@@ -126,4 +126,53 @@ public class UserDao {
         return userlist;
     }
 
+    public List<User> getPendingUsers() {
+        List<User> pendingList = new ArrayList<>();
+        String sql = "SELECT * FROM users WHERE status = 'PENDING'";
+
+            try(Connection conn = Database_Connection.getConnection()){
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(sql);
+
+                while (rs.next()) {
+
+                    pendingList.add(new User(
+                        rs.getInt("id"),
+                        rs.getString("username"),
+                        rs.getString("password"),
+                        rs.getString("role"),
+                        rs.getString("status")
+
+                    ));
+                }
+
+            } catch (SQLException e) {
+                System.err.println("Error fetching all users: " + e.getMessage());
+            }
+            return pendingList;
+    }
+
+    public boolean approveUser(int userId) {
+
+        String sql = "UPDATE users SET status = 'APPROVED' WHERE id = ?";
+
+        try(Connection conn = Database_Connection.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)){
+
+            pstmt.setInt(1, userId);
+            int rowdUpdated = pstmt.executeUpdate();
+
+            if(rowdUpdated > 0){
+                System.out.println(" -> User ID: "+userId+" approved successfully!");
+                return true;
+            }else{
+                System.out.println(" -> ID not found");
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error approving users: " + e.getMessage());
+        }
+        return false;
+
+    }
 }

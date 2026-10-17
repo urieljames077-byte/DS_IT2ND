@@ -1,10 +1,39 @@
 package com.scc.dao;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import com.scc.model.User;
+
+import java.sql.*;
 
 public class UserDao {
+
+    public UserDao(){
+
+        try(Connection conn = Database_Connection.getConnection();
+            Statement stat = conn.createStatement()){
+            defaultAdminGenerator(conn);
+        }catch(SQLException e){
+            System.err.println("Error seeding default admin: " + e.getMessage());
+        }
+
+
+
+    }
+
+
+    public void defaultAdminGenerator(Connection conn) {
+        String checkSql = "SELECT COUNT(*) FROM users WHERE role = 'ADMIN'";
+        String insertSql = "INSERT INTO users (username, password, role, status) VALUES ('admin', 'admin123', 'ADMIN', 'APPROVED')";
+
+        try (Statement stat = conn.createStatement();
+             ResultSet rs = stat.executeQuery(checkSql)) {
+            if (rs.next() && rs.getInt(1) == 0) {
+                stat.executeUpdate(insertSql);
+                System.out.println("-> Default Admin Created (Username: admin | Password: admin123)");
+            }
+        } catch (SQLException e) {
+            System.err.println("Error seeding default admin: " + e.getMessage());
+        }
+    }
 
     public static boolean registerUser(String username, String password, String role) {
 
@@ -26,4 +55,46 @@ public class UserDao {
         }
     }
 
+    public User login(String username, String password) {
+        String sql = "SELECT id, username, password, role, status " +
+                "FROM users WHERE username = ? AND password = ?";
+
+        try (Connection conn = Database_Connection.getConnection();
+             PreparedStatement pstst = conn.prepareStatement(sql)) {
+
+            pstst.setString(1, username);
+            pstst.setString(2, password);
+
+            try (ResultSet rs = pstst.executeQuery()) {
+                if (rs.next()) {
+                    String status = rs.getString("status");
+
+                    if ("PENDING".equalsIgnoreCase(status)) {
+                        System.out.println(
+                                "-> Account is pending, Waiting for Approval!"
+                        );
+                        return null;
+                    }
+
+                    return new User(
+                            rs.getInt("id"),
+                            rs.getString("username"),
+                            rs.getString("password"),
+                            rs.getString("role"),
+                            status
+                    );
+
+                } else {
+                    System.out.println(
+                            "-> Invalid username or password!"
+                    );
+                    return null;
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Error during login: " + e.getMessage());
+            return null;
+        }
+    }
 }

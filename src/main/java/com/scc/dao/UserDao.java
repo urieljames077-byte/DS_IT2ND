@@ -1,5 +1,6 @@
 package com.scc.dao;
 
+import com.scc.model.LogAction;
 import com.scc.model.User;
 
 import java.sql.*;
@@ -8,16 +9,15 @@ import java.util.List;
 
 public class UserDao {
 
+    private final ActivityLogDao logDao = new ActivityLogDao();
+
     public UserDao(){
 
-        try(Connection conn = Database_Connection.getConnection();
-            Statement stat = conn.createStatement()){
+        try(Connection conn = Database_Connection.getConnection()){
             defaultAdminGenerator(conn);
         }catch(SQLException e){
             System.err.println("Error seeding default admin: " + e.getMessage());
         }
-
-
 
     }
 
@@ -98,8 +98,6 @@ public class UserDao {
             return null;
         }
 
-
-
     }
 
     public List<User> getAllUsers() {
@@ -130,29 +128,29 @@ public class UserDao {
         List<User> pendingList = new ArrayList<>();
         String sql = "SELECT * FROM users WHERE status = 'PENDING'";
 
-            try(Connection conn = Database_Connection.getConnection()){
-                Statement stmt = conn.createStatement();
-                ResultSet rs = stmt.executeQuery(sql);
+        try (Connection conn = Database_Connection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
 
-                while (rs.next()) {
+            while (rs.next()) {
 
-                    pendingList.add(new User(
+                pendingList.add(new User(
                         rs.getInt("id"),
                         rs.getString("username"),
                         rs.getString("password"),
                         rs.getString("role"),
                         rs.getString("status")
 
-                    ));
-                }
-
-            } catch (SQLException e) {
-                System.err.println("Error fetching all users: " + e.getMessage());
+                ));
             }
-            return pendingList;
+
+        } catch (SQLException e) {
+            System.err.println("Error fetching pending users: " + e.getMessage());
+        }
+        return pendingList;
     }
 
-    public boolean approveUser(int userId) {
+    public boolean approveUser(int userId, int adminId) {
 
         String sql = "UPDATE users SET status = 'APPROVED' WHERE id = ?";
 
@@ -160,29 +158,30 @@ public class UserDao {
             PreparedStatement pstmt = conn.prepareStatement(sql)){
 
             pstmt.setInt(1, userId);
-            int rowdUpdated = pstmt.executeUpdate();
+            int rowsUpdated = pstmt.executeUpdate();
 
-            if(rowdUpdated > 0){
+            if(rowsUpdated > 0){
                 System.out.println(" -> User ID: "+userId+" approved successfully!");
+                logDao.logAction(adminId, LogAction.USER_APPROVED,
+                        "Admin [" + adminId + "] approved account for User ID " + userId);
                 return true;
             }else{
                 System.out.println(" -> ID not found");
             }
 
-        } catch (Exception e) {
+        } catch (SQLException e) {
             System.err.println("Error approving users: " + e.getMessage());
         }
         return false;
 
     }
 
-    public boolean updateUserAndStatus (int userId, String newRole, String newStatus ){
+    public boolean updateUserAndStatus(int userId, String newRole, String newStatus, int adminId) {
 
         String sql = "UPDATE users SET role = ?, status = ? WHERE id = ?";
 
-        try (
-            Connection conn = Database_Connection.getConnection();
-            PreparedStatement pstmt = conn.prepareStatement(sql)){
+        try (Connection conn = Database_Connection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)){
 
             pstmt.setString(1, newRole.toUpperCase());
             pstmt.setString(2, newStatus.toUpperCase());
@@ -191,16 +190,17 @@ public class UserDao {
             int rowsUpdated = pstmt.executeUpdate();
             if(rowsUpdated > 0){
                 System.out.println(" -> User ID: "+userId+" updated successfully!");
+                logDao.logAction(adminId, LogAction.USER_UPDATED,
+                        "Admin [" + adminId + "] changed role of User " + userId
+                                + " to " + newRole.toUpperCase() + ", status " + newStatus.toUpperCase());
                 return true;
-
-
             }else{
                 System.out.println(" -> ID not found");
             }
-            return false;
-    } catch (SQLException e) {
+        } catch (SQLException e) {
             System.err.println("Error updating users: " + e.getMessage());
         }
-        return false;    }
+        return false;
+    }
 
 }

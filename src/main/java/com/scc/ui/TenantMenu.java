@@ -2,18 +2,18 @@ package com.scc.ui;
 
 import com.scc.dao.ActivityLogDao;
 import com.scc.dao.BookingDao;
+import com.scc.dao.RoomDao;
 import com.scc.model.LogAction;
-import com.scc.model.Room;
 import com.scc.model.User;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
-import java.util.List;
 import java.util.Scanner;
 
 public class TenantMenu {
 
     private final BookingDao bookingDao = new BookingDao();
+    private final RoomDao roomDao = new RoomDao();
     private final ActivityLogDao logDao = new ActivityLogDao();
     private final Scanner scanner;
 
@@ -47,18 +47,7 @@ public class TenantMenu {
     }
 
     private void viewRooms() {
-        List<Room> rooms = bookingDao.getAllRooms();
-        if (rooms.isEmpty()) {
-            System.out.println(" -> No rooms found.");
-            return;
-        }
-        String fmt = "%-5s | %-8s | %-10s | %-10s | %-12s%n";
-        System.out.println();
-        System.out.printf(fmt, "ID", "Room No", "Type", "Rate", "Status");
-        System.out.println("-".repeat(56));
-        for (Room r : rooms) {
-            System.out.printf(fmt, r.id(), r.roomNum(), r.roomType(), r.rate(), r.status());
-        }
+        RoomPrinter.print(roomDao.getAllRooms());
     }
 
     private void requestBooking(User tenant) {
@@ -68,7 +57,7 @@ public class TenantMenu {
             System.out.println(" -> Operation Cancelled.");
             return;
         }
-        if (bookingDao.getAllRooms().stream().noneMatch(r -> r.id() == roomId)) {
+        if (roomDao.getAllRooms().stream().noneMatch(r -> r.id() == roomId)) {
             System.out.println(" -> [Error] Room ID not found.");
             return;
         }

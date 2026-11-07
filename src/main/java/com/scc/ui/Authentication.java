@@ -91,6 +91,7 @@ public class Authentication {
             switch (user.role()) {
                 case "ADMIN" -> new AdminMenu(userDao, sc).display(user);
                 case "TENANT" -> new TenantMenu(sc).display(user);
+                case "STAFF" -> new StaffMenu(sc).display(user);
                 default -> System.out.println("Account role not found!");
             }
         }

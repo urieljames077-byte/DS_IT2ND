@@ -2,7 +2,6 @@ package com.scc.dao;
 
 import com.scc.model.Booking;
 import com.scc.model.LogAction;
-import com.scc.model.Room;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -76,22 +75,6 @@ public class BookingDao {
             System.err.println("Error updating booking: " + e.getMessage());
         }
         return false;
-    }
-
-    public List<Room> getAllRooms() {
-        List<Room> rooms = new ArrayList<>();
-        String sql = "SELECT id, room_num, room_type, rate, status FROM Room ORDER BY room_num";
-        try (Connection conn = Database_Connection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                rooms.add(new Room(rs.getInt("id"), rs.getString("room_num"),
-                        rs.getString("room_type"), rs.getDouble("rate"), rs.getString("status")));
-            }
-        } catch (SQLException e) {
-            System.err.println("Error fetching rooms: " + e.getMessage());
-        }
-        return rooms;
     }
 
     public List<Booking> getPendingBookings() {

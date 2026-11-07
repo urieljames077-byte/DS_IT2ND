@@ -11,5 +11,8 @@ public final class LogAction {
     public static final String BOOKING_APPROVED = "BOOKING_APPROVED";
     public static final String BOOKING_CANCELED = "BOOKING_CANCELED";
     public static final String PAYMENT_RECORDED = "PAYMENT_RECORDED";
+    public static final String ROOM_ADDED       = "ROOM_ADDED";
+    public static final String ROOM_UPDATED     = "ROOM_UPDATED";
+    public static final String ROOM_DELETED     = "ROOM_DELETED";
     public static final String LOGS_CLEARED     = "LOGS_CLEARED";
 }

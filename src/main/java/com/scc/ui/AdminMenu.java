@@ -2,6 +2,7 @@ package com.scc.ui;
 
 import com.scc.dao.ActivityLogDao;
 import com.scc.dao.BookingDao;
+import com.scc.dao.RoomDao;
 import com.scc.dao.UserDao;
 import com.scc.model.ActivityLog;
 import com.scc.model.Booking;
@@ -16,6 +17,7 @@ public class AdminMenu {
     private final UserDao userDao;
     private final ActivityLogDao logDao = new ActivityLogDao();
     private final BookingDao bookingDao = new BookingDao();
+    private final RoomDao roomDao = new RoomDao();
     private final Scanner scanner;
 
     public AdminMenu(UserDao userDao, Scanner scanner) {
@@ -35,10 +37,11 @@ public class AdminMenu {
             System.out.println("4. Add New User");
             System.out.println("5. Update User Role / Status");
             System.out.println("6. Delete User Account");
-            System.out.println("7. Review Pending Bookings");
-            System.out.println("8. View System Audit Logs");
-            System.out.println("9. Logout");
-            System.out.print("Choose an option (1-9): ");
+            System.out.println("7. Manage Rooms");
+            System.out.println("8. Review Pending Bookings");
+            System.out.println("9. View System Audit Logs");
+            System.out.println("10. Logout");
+            System.out.print("Choose an option (1-10): ");
 
             String choice = scanner.nextLine().trim();
 
@@ -47,9 +50,10 @@ public class AdminMenu {
                 case "2" -> viewPendingUserApprove();
                 case "3" -> approveUser(admin);
                 case "5" -> updateUser(admin);
-                case "7" -> reviewBookings(admin);
-                case "8" -> viewAuditLogs(admin);
-                case "9" -> {
+                case "7" -> manageRooms(admin);
+                case "8" -> reviewBookings(admin);
+                case "9" -> viewAuditLogs(admin);
+                case "10" -> {
                     logDao.logAction(admin.id(), LogAction.USER_LOGOUT,
                             "User [" + admin.username() + "] (ID: " + admin.id() + ") logged out.");
                     System.out.println(" -> Logged out.");
@@ -146,6 +150,105 @@ public class AdminMenu {
         userDao.updateUserAndStatus(userId, newRole, newStatus, currentAdmin.id());
     }
 
+
+
+    // ---------------- Rooms ----------------
+
+    private void manageRooms(User admin) {
+        while (true) {
+            System.out.println("\n=== MANAGE ROOMS ===");
+            System.out.println("1. View Rooms");
+            System.out.println("2. Add Room");
+            System.out.println("3. Update Room Rate");
+            System.out.println("4. Update Room Status");
+            System.out.println("5. Remove Room");
+            System.out.println("0. Back");
+            System.out.print("Choose: ");
+
+            switch (scanner.nextLine().trim()) {
+                case "1" -> RoomPrinter.print(roomDao.getAllRooms());
+                case "2" -> addRoom(admin);
+                case "3" -> {
+                    RoomPrinter.print(roomDao.getAllRooms());
+                    int id = readIntInput("Enter Room ID (or 0 to cancel): ");
+                    if (id != 0) {
+                        double rate = readRate();
+                        roomDao.updateRate(id, rate, admin.id());
+                    }
+                }
+                case "4" -> {
+                    RoomPrinter.print(roomDao.getAllRooms());
+                    int id = readIntInput("Enter Room ID (or 0 to cancel): ");
+                    if (id != 0) {
+                        String status = readRoomStatus();
+                        if (status != null) {
+                            roomDao.updateStatus(id, status, admin.id());
+                        }
+                    }
+                }
+                case "5" -> {
+                    RoomPrinter.print(roomDao.getAllRooms());
+                    int id = readIntInput("Enter Room ID to remove (or 0 to cancel): ");
+                    if (id != 0) {
+                        System.out.print("Type YES to confirm removal: ");
+                        if (scanner.nextLine().trim().equalsIgnoreCase("YES")) {
+                            roomDao.deleteRoom(id, admin.id());
+                        } else {
+                            System.out.println(" -> Cancelled.");
+                        }
+                    }
+                }
+                case "0" -> { return; }
+                default -> System.out.println(" -> [ERROR] Invalid Option");
+            }
+        }
+    }
+
+    private void addRoom(User admin) {
+        System.out.print("Room number (e.g. 301): ");
+        String roomNum = scanner.nextLine().trim();
+        if (roomNum.isEmpty()) {
+            System.out.println(" -> [ERROR] Room number cannot be empty.");
+            return;
+        }
+        System.out.print("Room type (e.g. Single / Double): ");
+        String type = scanner.nextLine().trim();
+        if (type.isEmpty()) {
+            System.out.println(" -> [ERROR] Room type cannot be empty.");
+            return;
+        }
+        double rate = readRate();
+        roomDao.addRoom(roomNum, type, rate, admin.id());
+    }
+
+    private double readRate() {
+        while (true) {
+            System.out.print("Monthly rate (PHP): ");
+            try {
+                double rate = Double.parseDouble(scanner.nextLine().trim());
+                if (rate > 0) {
+                    return rate;
+                }
+            } catch (NumberFormatException ignored) {
+            }
+            System.out.println(" -> [ERROR] Enter a number greater than 0.");
+        }
+    }
+
+    private String readRoomStatus() {
+        while (true) {
+            System.out.print("Enter Status (VACANT / OCCUPIED / MAINTENANCE) [0 to cancel]: ");
+            String s = scanner.nextLine().trim().toUpperCase();
+            if (s.equals("0") || s.equals("CANCEL")) {
+                System.out.println(" -> Operation Cancelled.");
+                return null;
+            }
+            if (s.equals("VACANT") || s.equals("OCCUPIED") || s.equals("MAINTENANCE")) {
+                return s;
+            }
+            System.out.println(" -> [ERROR] Invalid status.");
+        }
+    }
 
     // ---------------- Bookings ----------------
 
